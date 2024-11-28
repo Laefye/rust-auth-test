@@ -8,14 +8,14 @@ pub mod user;
 pub mod post;
 
 pub struct Network {
-    repository: Arc<dyn Repository>,
+    repository: Arc<dyn Repository + Sync + Send>,
 }
 
 impl Network
 {
     pub fn new<T>(repository: T) -> Self
     where 
-        T: Repository + 'static
+        T: Repository + Sync + Send + 'static
     {
         Self {
             repository: Arc::new(repository),

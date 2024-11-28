@@ -63,7 +63,7 @@ impl<'a> UserManager<'a> {
         password == Self::hash_password(parts[0].to_string(), input)
     }
 
-    pub fn create_user(&self, username: String, password: String) -> Result<(), UserError> {
+    pub fn create_user(&self, username: String, password: String) -> Result<Uuid, UserError> {
         if self.network.get_repository()
             .get_user_by_username(username.clone())?
             .is_some() {
@@ -80,10 +80,9 @@ impl<'a> UserManager<'a> {
             created_at: created_at,
             last_active: created_at,
         };
-        println!("{}", user.password);
         self.network.get_repository()
-            .push_user(user)?;
-        Ok(())
+            .push_user(user.clone())?;
+        Ok(user.id)
     }
 
     pub fn login(&self, username: String, password: String) -> Result<String, UserError> {
@@ -109,7 +108,7 @@ impl<'a> UserManager<'a> {
         Ok(session.token)
     }
 
-    pub fn get_user_access(&self, token: String) -> Result<UserAccess, UserError> {
+    pub fn get_user_access(&self, token: String) -> Result<UserAccess<'a>, UserError> {
         let session = self.network.get_repository()
             .get_session_by_token(token)?;
         if session.is_none() {
@@ -163,7 +162,7 @@ impl<'a> UserAccess<'a> {
         self.user.id
     }
 
-    pub fn post(&mut self, text: String) -> Result<PostAccess, UserError> {
+    pub fn post<'b>(&'b mut self, text: String) -> Result<PostAccess<'a, 'b>, UserError> {
         let post = DataPost {
             id: Uuid::new_v4(),
             text,
@@ -178,7 +177,7 @@ impl<'a> UserAccess<'a> {
         Ok(PostAccess::new(self, post))
     }
 
-    pub fn get_posts(&self, offset: usize, limit: usize) -> Result<Vec<PostAccess>, UserError> {
+    pub fn get_my_posts<'b>(&'b self, offset: usize, limit: usize) -> Result<Vec<PostAccess<'a, 'b>>, UserError> {
         Ok(
             self.network.get_repository()
                 .get_posts_by_user(self.id(), offset, limit)?
